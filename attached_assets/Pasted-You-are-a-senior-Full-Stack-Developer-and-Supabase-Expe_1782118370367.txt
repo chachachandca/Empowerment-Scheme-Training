@@ -1,0 +1,97 @@
+You are a senior Full-Stack Developer and Supabase Expert.
+
+I have already built the frontend of my website and I want you to connect it completely to Supabase using only the following credentials:
+
+SUPABASE PROJECT URL:
+[https://ojenoifkzwiddtyjenqb.supabase.co]
+
+SUPABASE PUBLISHABLE (ANON) KEY:
+[sb_publishable_s0T9-wgBlGK7MWwtuKW4pQ_6t_AYvgm]
+
+Your task is to:
+
+1. Configure the Supabase client correctly.
+
+2. Create all necessary database tables based on the registration form fields.
+
+3. Generate the SQL schema for Supabase.
+
+4. Enable Row Level Security (RLS).
+
+5. Create secure policies that allow users to submit registration forms while preventing unauthorized access to other records.
+
+6. Connect every form field to Supabase.
+
+7. Store uploaded passport photographs in a Supabase Storage bucket.
+
+8. Save uploaded image URLs in the database.
+
+9. Implement form validation before submission.
+
+10. Generate a unique registration number automatically for each applicant.
+
+11. Save all registration data to Supabase.
+
+12. Display success and error notifications.
+
+13. Create a submission confirmation page.
+
+14. Create a registration slip page showing:
+    
+    - Registration Number
+    - Applicant Information
+    - Selected Training Skill
+    - Date Submitted
+
+15. Add functionality to:
+    
+    - Print registration slip
+    - Download registration slip as PDF
+
+16. Create an Admin Dashboard connected to Supabase that can:
+    
+    - View all applicants
+    - Search applicants
+    - Filter by State
+    - Filter by Skill
+    - Export CSV
+    - Export Excel
+    - Export PDF
+
+17. Create Supabase Storage buckets:
+    
+    - applicant-passports
+    - documents
+
+18. Generate all required files including:
+    
+    - supabaseClient.js
+    - database.sql
+    - API/service functions
+    - authentication utilities
+    - upload handlers
+    - dashboard components
+
+19. Use best security practices:
+    
+    - Environment variables for credentials
+    - Secure database queries
+    - Input sanitization
+    - Error handling
+
+20. Generate complete production-ready code that works immediately after replacing:
+
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+
+with my actual Supabase credentials.
+
+Provide:
+
+- Complete code
+- Folder structure
+- SQL scripts
+- Setup instructions
+- Deployment instructions
+
+The solution must be responsive, scalable, secure, and fully integrated with Supabase.
