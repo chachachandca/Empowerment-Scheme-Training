@@ -1,0 +1,248 @@
+PROJECT TITLE: NATIONAL EMPOWERMENT SCHEME – TRAINING AND VOCATIONAL SKILLS REGISTRATION PORTAL
+
+Act as a senior UI/UX designer, frontend developer, backend developer, and database architect.
+
+Build a complete professional, modern, secure, mobile-first responsive website called:
+
+"NATIONAL EMPOWERMENT SCHEME"
+Training and Vocational Skills Registration Portal
+
+GENERAL REQUIREMENTS
+
+• Create a modern government-style professional interface.
+• Fully responsive on mobile phones, tablets, laptops, and desktops.
+• Clean and attractive UI with excellent user experience.
+• Use a blue, green, and white color scheme representing empowerment, trust, and growth.
+• Include smooth animations and modern card designs.
+• Create a professional logo section displaying:
+NATIONAL EMPOWERMENT SCHEME
+Training and Vocational Skills Registration
+
+• Add a hero section explaining the scheme.
+• Include an About Program section.
+• Include Benefits of the Program section.
+• Include Registration Form section.
+• Include Contact section.
+• Include Footer.
+
+REGISTRATION FORM
+
+Create a multi-step registration form with progress indicator.
+
+STEP 1 – PERSONAL INFORMATION
+
+Fields:
+
+Full Name
+Gender
+(Male, Female, Other)
+
+Date of Birth
+
+Phone Number
+
+Email Address
+
+Residential Address
+
+State
+
+Local Government Area (LGA)
+
+State of Origin
+
+LGA of Origin
+
+National Identification Number (NIN)
+
+Bank Name
+
+Bank Account Number
+
+Passport Photograph Upload
+
+Validation Requirements:
+
+• All required fields must be validated.
+• Phone number validation.
+• Email validation.
+• NIN must be numeric.
+• Account number validation.
+
+STEP 2 – EDUCATIONAL BACKGROUND
+
+Highest Level of Education
+
+Options:
+• Primary
+• Secondary
+• Diploma
+• Degree
+• Other
+
+School/Institution Attended
+
+Graduation Year
+
+STEP 3 – VOCATIONAL SKILLS INTEREST
+
+Allow multiple selection.
+
+Options:
+
+• Tailoring/Fashion Design
+• Hairdressing/Barbing
+• Catering & Baking
+• Agriculture/Farming
+• Welding/Fabrication
+• Electrical Installation
+• Plumbing
+• ICT/Computer Skills
+• Carpentry
+• Soap/Cosmetics Production
+• Other
+
+If "Other" is selected, display text input.
+
+STEP 4 – EXPERIENCE
+
+Do you have any previous skill/training experience?
+
+Options:
+• Yes
+• No
+
+If Yes:
+Display:
+"State the Skill"
+
+STEP 5 – TRAINING EXPECTATION
+
+Large text area:
+
+"What do you hope to gain from this training?"
+
+STEP 6 – BENEFICIARY INFORMATION
+
+Employment Status
+
+Options:
+
+• Employed
+• Self-employed
+• Unemployed
+• Student
+
+Do you currently have a business?
+
+Options:
+• Yes
+• No
+
+If Yes:
+Display text area:
+Describe your business
+
+STEP 7 – DECLARATION
+
+Display declaration:
+
+"I certify that the information provided in this form is true and correct."
+
+Fields:
+
+Full Name
+
+Digital Signature
+
+Date
+
+Checkbox:
+"I agree to the terms and conditions"
+
+SUBMISSION FEATURES
+
+• Submit button.
+• Save Draft button.
+• Print Registration button.
+• Download PDF Confirmation.
+• Success page after submission.
+• Generate unique registration number automatically.
+• Display registration slip after submission.
+
+ADMIN DASHBOARD
+
+Create an admin dashboard with:
+
+• Secure Admin Login
+• Applicant Statistics
+• Total Registrations
+• Male/Female Count
+• State Statistics
+• Skill Category Statistics
+• Search Applicants
+• View Applicant Details
+• Export CSV
+• Export Excel
+• Export PDF
+
+DATABASE
+
+Design database tables for:
+
+Applicants
+Education
+Skills
+Training Expectations
+Beneficiary Information
+Administrators
+
+TECHNICAL REQUIREMENTS
+
+Frontend:
+HTML5
+CSS3
+JavaScript
+
+Framework:
+React + Tailwind CSS
+
+Backend:
+Node.js + Express
+
+Database:
+Supabase PostgreSQL
+
+AUTHENTICATION
+
+• Admin authentication
+• Secure sessions
+• Password encryption
+
+ADDITIONAL FEATURES
+
+• Dark Mode
+• Light Mode
+• Loading Animations
+• Toast Notifications
+• Form Progress Tracking
+• Accessibility Compliance
+• SEO Optimization
+• Fast Performance
+
+DELIVERABLES
+
+Generate:
+
+1. Complete project folder structure
+2. Full frontend code
+3. Full backend code
+4. Supabase database schema
+5. API routes
+6. Admin dashboard
+7. Responsive UI components
+8. Deployment instructions
+9. Environment variables setup
+10. Production-ready source code
+
+The final website should look like a modern government empowerment registration portal capable of handling thousands of applicants professionally.

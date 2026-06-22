@@ -3,13 +3,20 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: National Empowerment Scheme - Training and Vocational Skills Registration Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: applicants
+    description: Applicant registration operations
+  - name: auth
+    description: Admin authentication operations
+  - name: admin
+    description: Admin dashboard operations
+
 paths:
   /healthz:
     get:
@@ -24,6 +31,216 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /applicants:
+    get:
+      operationId: listApplicants
+      tags: [applicants]
+      summary: List all applicants
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by name, email, or registration number
+        - in: query
+          name: state
+          schema:
+            type: string
+          description: Filter by state
+        - in: query
+          name: skill
+          schema:
+            type: string
+          description: Filter by skill category
+        - in: query
+          name: gender
+          schema:
+            type: string
+          description: Filter by gender
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by status (submitted, draft)
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: Items per page
+      responses:
+        "200":
+          description: List of applicants
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicantListResponse"
+
+    post:
+      operationId: createApplicant
+      tags: [applicants]
+      summary: Submit a new applicant registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicantInput"
+      responses:
+        "201":
+          description: Registration submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applicant"
+        "400":
+          description: Validation error
+
+  /applicants/stats:
+    get:
+      operationId: getApplicantStats
+      tags: [admin]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicantStats"
+
+  /applicants/draft:
+    post:
+      operationId: saveDraft
+      tags: [applicants]
+      summary: Save a draft registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DraftInput"
+      responses:
+        "200":
+          description: Draft saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applicant"
+
+  /applicants/{id}:
+    get:
+      operationId: getApplicant
+      tags: [applicants]
+      summary: Get a single applicant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Applicant details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applicant"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateApplicant
+      tags: [applicants]
+      summary: Update applicant status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicantUpdate"
+      responses:
+        "200":
+          description: Updated applicant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Applicant"
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteApplicant
+      tags: [applicants]
+      summary: Delete an applicant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /auth/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [auth]
+      summary: Admin logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current admin
+      responses:
+        "200":
+          description: Current admin info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin"
+        "401":
+          description: Not authenticated
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +251,384 @@ components:
       required:
         - status
 
+    Applicant:
+      type: object
+      required:
+        - id
+        - registrationNumber
+        - fullName
+        - gender
+        - dateOfBirth
+        - phoneNumber
+        - email
+        - residentialAddress
+        - state
+        - lga
+        - stateOfOrigin
+        - lgaOfOrigin
+        - nin
+        - bankName
+        - bankAccountNumber
+        - highestEducation
+        - schoolAttended
+        - graduationYear
+        - skills
+        - hasPreviousExperience
+        - trainingExpectation
+        - employmentStatus
+        - hasExistingBusiness
+        - declarationName
+        - declarationDate
+        - agreedToTerms
+        - status
+        - createdAt
+      properties:
+        id:
+          type: integer
+        registrationNumber:
+          type: string
+        fullName:
+          type: string
+        gender:
+          type: string
+        dateOfBirth:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        residentialAddress:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+        stateOfOrigin:
+          type: string
+        lgaOfOrigin:
+          type: string
+        nin:
+          type: string
+        bankName:
+          type: string
+        bankAccountNumber:
+          type: string
+        passportPhotoUrl:
+          type: ["string", "null"]
+        highestEducation:
+          type: string
+        schoolAttended:
+          type: string
+        graduationYear:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        otherSkill:
+          type: ["string", "null"]
+        hasPreviousExperience:
+          type: boolean
+        previousSkillDescription:
+          type: ["string", "null"]
+        trainingExpectation:
+          type: string
+        employmentStatus:
+          type: string
+        hasExistingBusiness:
+          type: boolean
+        businessDescription:
+          type: ["string", "null"]
+        declarationName:
+          type: string
+        digitalSignature:
+          type: ["string", "null"]
+        declarationDate:
+          type: string
+        agreedToTerms:
+          type: boolean
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: ["string", "null"]
+
+    ApplicantInput:
+      type: object
+      required:
+        - fullName
+        - gender
+        - dateOfBirth
+        - phoneNumber
+        - email
+        - residentialAddress
+        - state
+        - lga
+        - stateOfOrigin
+        - lgaOfOrigin
+        - nin
+        - bankName
+        - bankAccountNumber
+        - highestEducation
+        - schoolAttended
+        - graduationYear
+        - skills
+        - hasPreviousExperience
+        - trainingExpectation
+        - employmentStatus
+        - hasExistingBusiness
+        - declarationName
+        - declarationDate
+        - agreedToTerms
+      properties:
+        fullName:
+          type: string
+        gender:
+          type: string
+        dateOfBirth:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        residentialAddress:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+        stateOfOrigin:
+          type: string
+        lgaOfOrigin:
+          type: string
+        nin:
+          type: string
+        bankName:
+          type: string
+        bankAccountNumber:
+          type: string
+        passportPhotoUrl:
+          type: string
+        highestEducation:
+          type: string
+        schoolAttended:
+          type: string
+        graduationYear:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        otherSkill:
+          type: string
+        hasPreviousExperience:
+          type: boolean
+        previousSkillDescription:
+          type: string
+        trainingExpectation:
+          type: string
+        employmentStatus:
+          type: string
+        hasExistingBusiness:
+          type: boolean
+        businessDescription:
+          type: string
+        declarationName:
+          type: string
+        digitalSignature:
+          type: string
+        declarationDate:
+          type: string
+        agreedToTerms:
+          type: boolean
+
+    DraftInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        gender:
+          type: string
+        dateOfBirth:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        residentialAddress:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+        stateOfOrigin:
+          type: string
+        lgaOfOrigin:
+          type: string
+        nin:
+          type: string
+        bankName:
+          type: string
+        bankAccountNumber:
+          type: string
+        passportPhotoUrl:
+          type: string
+        highestEducation:
+          type: string
+        schoolAttended:
+          type: string
+        graduationYear:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        otherSkill:
+          type: string
+        hasPreviousExperience:
+          type: boolean
+        previousSkillDescription:
+          type: string
+        trainingExpectation:
+          type: string
+        employmentStatus:
+          type: string
+        hasExistingBusiness:
+          type: boolean
+        businessDescription:
+          type: string
+        declarationName:
+          type: string
+        digitalSignature:
+          type: string
+        declarationDate:
+          type: string
+        agreedToTerms:
+          type: boolean
+
+    ApplicantUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        fullName:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+
+    ApplicantListResponse:
+      type: object
+      required:
+        - data
+        - total
+        - page
+        - limit
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Applicant"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    ApplicantStats:
+      type: object
+      required:
+        - totalRegistrations
+        - maleCount
+        - femaleCount
+        - otherGenderCount
+        - draftCount
+        - submittedCount
+        - byState
+        - bySkill
+        - byEducation
+        - byEmploymentStatus
+        - recentRegistrations
+      properties:
+        totalRegistrations:
+          type: integer
+        maleCount:
+          type: integer
+        femaleCount:
+          type: integer
+        otherGenderCount:
+          type: integer
+        draftCount:
+          type: integer
+        submittedCount:
+          type: integer
+        byState:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatEntry"
+        bySkill:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatEntry"
+        byEducation:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatEntry"
+        byEmploymentStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatEntry"
+        recentRegistrations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Applicant"
+
+    StatEntry:
+      type: object
+      required:
+        - label
+        - count
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+
+    LoginInput:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required:
+        - success
+        - admin
+      properties:
+        success:
+          type: boolean
+        admin:
+          $ref: "#/components/schemas/Admin"
+
+    Admin:
+      type: object
+      required:
+        - id
+        - username
+        - role
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string

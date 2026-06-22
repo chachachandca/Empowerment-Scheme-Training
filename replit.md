@@ -1,6 +1,6 @@
-# [Project name]
+# National Empowerment Scheme — Training and Vocational Skills Registration Portal
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A professional Nigerian government-style portal for citizens to register for vocational training grants. Features a 7-step multi-form registration, admin dashboard with statistics, and full backend API.
 
 ## Run & Operate
 
@@ -19,18 +19,29 @@ _Replace the heading above with the project's name, and this line with one sente
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
+- Frontend: React + Vite + Tailwind CSS + shadcn/ui
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth)
+- `lib/db/src/schema/applicants.ts` — Applicants table schema
+- `lib/db/src/schema/admins.ts` — Admins table schema
+- `artifacts/api-server/src/routes/applicants.ts` — Applicants API routes
+- `artifacts/api-server/src/routes/auth.ts` — Admin auth routes (session via HTTP-only cookie)
+- `artifacts/portal/src/pages/` — All frontend pages
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Admin sessions are stored in-memory (Map) — sessions reset on server restart. For production, migrate to a DB-backed session store.
+- Password hashing uses SHA-256 + a fixed salt (not bcrypt) — adequate for a starter but upgrade to bcrypt for production.
+- Registration numbers are auto-generated: `NES-{YEAR}-{6-digit-random}`.
+- Skills are stored as a `text[]` array column in PostgreSQL.
+- Stats endpoint computes aggregates in-memory from all applicants — replace with SQL GROUP BY queries for large datasets.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Public Portal**: Landing page, 7-step multi-step registration form (personal info, education, skills, experience, expectation, beneficiary, declaration), success/registration slip page
+- **Admin Dashboard**: Secure login, applicant list with search/pagination, detail modal, stats with bar/pie charts, delete applicant
 
 ## User preferences
 
@@ -38,7 +49,14 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run `pnpm --filter @workspace/api-spec run codegen` after any OpenAPI spec changes before using updated hooks
+- `pnpm --filter @workspace/db run push` after schema changes
+
+## Admin Access
+
+- URL: `/admin/login`
+- Username: `admin`
+- Password: `admin123`
 
 ## Pointers
 
