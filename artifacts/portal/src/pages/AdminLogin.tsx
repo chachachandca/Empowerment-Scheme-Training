@@ -35,11 +35,13 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-muted/20 flex flex-col">
       <header className="bg-primary text-primary-foreground shadow-lg">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
-          <img src={logoPath} alt="NES Logo" className="h-14 w-14 rounded-full border-2 border-white/40 object-cover flex-shrink-0" />
-          <div>
-            <h1 className="font-bold text-lg leading-tight">NATIONAL EMPOWERMENT SCHEME</h1>
-            <p className="text-primary-foreground/80 text-xs">Training and Vocational Skills Registration Portal</p>
-          </div>
+          <a href="/" className="flex items-center gap-4 group">
+            <img src={logoPath} alt="NES Logo" className="h-14 w-14 rounded-full border-2 border-white/40 object-cover flex-shrink-0 transition-transform group-hover:scale-105" />
+            <div>
+              <h1 className="font-bold text-lg leading-tight group-hover:underline">NATIONAL EMPOWERMENT SCHEME</h1>
+              <p className="text-primary-foreground/80 text-xs">Training and Vocational Skills Registration Portal</p>
+            </div>
+          </a>
         </div>
       </header>
 

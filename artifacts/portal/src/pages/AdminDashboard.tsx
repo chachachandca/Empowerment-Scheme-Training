@@ -105,13 +105,13 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-muted/20 flex flex-col">
       <header className="bg-primary text-primary-foreground shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src={logoPath} alt="NES Logo" className="h-10 w-10 rounded-full border-2 border-white/40 object-cover flex-shrink-0" />
+          <a href="/" className="flex items-center gap-3 group">
+            <img src={logoPath} alt="NES Logo" className="h-10 w-10 rounded-full border-2 border-white/40 object-cover flex-shrink-0 transition-transform group-hover:scale-105" />
             <div>
-              <h1 className="font-bold text-base leading-tight">NATIONAL EMPOWERMENT SCHEME</h1>
+              <h1 className="font-bold text-base leading-tight group-hover:underline">NATIONAL EMPOWERMENT SCHEME</h1>
               <p className="text-primary-foreground/75 text-xs">Admin Dashboard</p>
             </div>
-          </div>
+          </a>
           <div className="flex items-center gap-3">
             <span className="text-sm text-primary-foreground/80 hidden sm:block">Welcome, <span className="font-semibold">{(me as Record<string, unknown>).username as string}</span></span>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10" data-testid="button-logout">

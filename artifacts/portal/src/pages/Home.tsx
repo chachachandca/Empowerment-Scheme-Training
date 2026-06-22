@@ -8,13 +8,13 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={logoPath} alt="National Empowerment Scheme Logo" className="h-12 w-auto" />
+          <Link href="/" className="flex items-center gap-4 group">
+            <img src={logoPath} alt="National Empowerment Scheme Logo" className="h-12 w-auto transition-transform group-hover:scale-105" />
             <div className="hidden md:block">
-              <h1 className="text-lg font-bold text-primary leading-tight">NATIONAL EMPOWERMENT SCHEME</h1>
+              <h1 className="text-lg font-bold text-primary leading-tight group-hover:underline">NATIONAL EMPOWERMENT SCHEME</h1>
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Training and Vocational Skills</p>
             </div>
-          </div>
+          </Link>
           <nav className="flex items-center gap-4">
             <Link href="/admin/login" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">
               Admin Portal
