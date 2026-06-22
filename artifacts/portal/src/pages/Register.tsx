@@ -207,11 +207,70 @@ export default function Register() {
               </div>
             </div>
             <div>
-              <Label htmlFor="passportPhotoUrl">Passport Photograph URL</Label>
-              <Input id="passportPhotoUrl" data-testid="input-passportPhotoUrl" value={formData.passportPhotoUrl} onChange={e => updateField("passportPhotoUrl", e.target.value)} placeholder="Enter URL of your passport photograph" />
-              {formData.passportPhotoUrl && (
-                <img src={formData.passportPhotoUrl} alt="Passport" className="mt-2 w-24 h-24 object-cover rounded-md border border-border" onError={e => (e.currentTarget.style.display = "none")} />
-              )}
+              <Label>Passport Photograph *</Label>
+              <div className="mt-1">
+                {formData.passportPhotoUrl ? (
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={formData.passportPhotoUrl}
+                      alt="Passport"
+                      className="w-28 h-28 object-cover rounded-lg border-2 border-primary/30 shadow-sm"
+                    />
+                    <div className="flex flex-col gap-2 pt-1">
+                      <p className="text-sm text-secondary font-medium">Photo uploaded ✓</p>
+                      <label
+                        htmlFor="passportPhotoUpload"
+                        className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-muted/50 hover:bg-muted text-sm text-muted-foreground transition-colors"
+                      >
+                        Change photo
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => updateField("passportPhotoUrl", "")}
+                        className="text-xs text-destructive hover:underline text-left"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="passportPhotoUpload"
+                    className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-border rounded-xl cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <svg className="w-10 h-10 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16v-4m0 0V8m0 4h4m-4 0H8M20 21H4a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v14a2 2 0 01-2 2z" />
+                      </svg>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-foreground">Tap to upload passport photo</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WEBP · Max 5MB</p>
+                      </div>
+                    </div>
+                  </label>
+                )}
+                <input
+                  id="passportPhotoUpload"
+                  data-testid="input-passportPhotoUpload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      alert("Photo must be smaller than 5MB");
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      updateField("passportPhotoUrl", ev.target?.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
             </div>
           </div>
         );
