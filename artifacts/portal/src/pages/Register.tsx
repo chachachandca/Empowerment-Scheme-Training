@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, CheckCircle, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, Save, Loader2 } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
+import { uploadPassportPhoto } from "@/lib/supabase";
 
 const NIGERIAN_STATES = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -87,6 +88,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(defaultValues);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const { toast } = useToast();
   const createApplicant = useCreateApplicant();
   const saveDraft = useSaveDraft();
@@ -233,6 +235,12 @@ export default function Register() {
                       </button>
                     </div>
                   </div>
+                ) : photoUploading ? (
+                  <div className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-primary/40 rounded-xl bg-primary/5">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+                    <p className="text-sm font-medium text-primary">Uploading to Supabase Storage…</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Please wait</p>
+                  </div>
                 ) : (
                   <label
                     htmlFor="passportPhotoUpload"
@@ -244,7 +252,7 @@ export default function Register() {
                       </svg>
                       <div className="text-center">
                         <p className="text-sm font-medium text-foreground">Tap to upload passport photo</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WEBP · Max 5MB</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WEBP · Max 5MB — stored in Supabase</p>
                       </div>
                     </div>
                   </label>
@@ -255,19 +263,25 @@ export default function Register() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/jpg"
                   className="hidden"
-                  onChange={e => {
+                  disabled={photoUploading}
+                  onChange={async e => {
                     const file = e.target.files?.[0];
                     if (!file) return;
                     if (file.size > 5 * 1024 * 1024) {
-                      alert("Photo must be smaller than 5MB");
+                      toast({ title: "Photo must be smaller than 5MB", variant: "destructive" });
                       return;
                     }
-                    const reader = new FileReader();
-                    reader.onload = ev => {
-                      updateField("passportPhotoUrl", ev.target?.result as string);
-                    };
-                    reader.readAsDataURL(file);
                     e.target.value = "";
+                    setPhotoUploading(true);
+                    try {
+                      const url = await uploadPassportPhoto(file);
+                      updateField("passportPhotoUrl", url);
+                      toast({ title: "Photo uploaded successfully" });
+                    } catch (err) {
+                      toast({ title: "Photo upload failed", description: (err as Error).message, variant: "destructive" });
+                    } finally {
+                      setPhotoUploading(false);
+                    }
                   }}
                 />
               </div>
