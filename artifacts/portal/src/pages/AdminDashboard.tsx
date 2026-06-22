@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   useGetMe,
@@ -19,37 +19,101 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer,
 } from "recharts";
 import {
-  LayoutDashboard, Users, BarChart2, LogOut, Search, Trash2, Eye, X, ChevronLeft, ChevronRight,
+  LayoutDashboard, Users, BarChart2, LogOut, Search, Trash2, Eye, X,
+  ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet, Filter, Printer,
 } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const CHART_COLORS = ["#1e3a8a","#166534","#1d4ed8","#15803d","#3730a3","#065f46","#1e40af","#14532d"];
 
+const NIGERIAN_STATES = [
+  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+  "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo",
+  "Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa",
+  "Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba",
+  "Yobe","Zamfara",
+];
+
+const SKILLS_OPTIONS = [
+  "Tailoring/Fashion Design","Hairdressing/Barbing","Catering & Baking",
+  "Agriculture/Farming","Welding/Fabrication","Electrical Installation",
+  "Plumbing","ICT/Computer Skills","Carpentry","Soap/Cosmetics Production","Other",
+];
+
 type Tab = "dashboard" | "applicants" | "statistics";
+type Applicant = Record<string, unknown>;
+
+function flattenApplicant(a: Applicant) {
+  return {
+    "Reg. Number": a.registrationNumber,
+    "Full Name": a.fullName,
+    Gender: a.gender,
+    "Date of Birth": a.dateOfBirth,
+    Phone: a.phoneNumber,
+    Email: a.email,
+    State: a.state,
+    LGA: a.lga,
+    "State of Origin": a.stateOfOrigin,
+    "LGA of Origin": a.lgaOfOrigin,
+    NIN: a.nin,
+    "Bank Name": a.bankName,
+    "Account No.": a.bankAccountNumber,
+    Education: a.highestEducation,
+    "School Attended": a.schoolAttended,
+    "Graduation Year": a.graduationYear,
+    Skills: Array.isArray(a.skills) ? (a.skills as string[]).join(", ") : "",
+    "Employment Status": a.employmentStatus,
+    "Training Expectation": a.trainingExpectation,
+    Status: a.status,
+    "Registered On": a.createdAt ? new Date(a.createdAt as string).toLocaleDateString("en-NG") : "",
+  };
+}
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [search, setSearch] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const [filterSkill, setFilterSkill] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedApplicant, setSelectedApplicant] = useState<Record<string, unknown> | null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const slipRef = useRef<HTMLDivElement>(null);
 
   const { data: me, isLoading: meLoading } = useGetMe({
-    query: {
-      queryKey: getGetMeQueryKey(),
-      retry: false,
-    },
+    query: { queryKey: getGetMeQueryKey(), retry: false },
   });
 
   const { data: stats, isLoading: statsLoading } = useGetApplicantStats({
     query: { queryKey: getGetApplicantStatsQueryKey() },
   });
 
-  const listParams = { search: search || undefined, page, limit: 15 };
+  const listParams = {
+    search: search || undefined,
+    state: filterState || undefined,
+    skill: filterSkill || undefined,
+    page,
+    limit: 15,
+  };
   const { data: applicantsList, isLoading: listLoading } = useListApplicants(listParams, {
     query: { queryKey: getListApplicantsQueryKey(listParams) },
+  });
+
+  // For exports we fetch all matching (no pagination)
+  const exportParams = {
+    search: search || undefined,
+    state: filterState || undefined,
+    skill: filterSkill || undefined,
+    limit: 10000,
+    page: 1,
+  };
+  const { data: allForExport } = useListApplicants(exportParams, {
+    query: { queryKey: getListApplicantsQueryKey(exportParams), enabled: tab === "applicants" },
   });
 
   const deleteApplicant = useDeleteApplicant();
@@ -66,10 +130,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!me) {
-    setLocation("/admin/login");
-    return null;
-  }
+  if (!me) { setLocation("/admin/login"); return null; }
 
   const handleLogout = () => {
     adminLogout.mutate(undefined, {
@@ -91,13 +152,144 @@ export default function AdminDashboard() {
   };
 
   const handleSearch = (val: string) => { setSearch(val); setPage(1); };
+  const handleFilterState = (val: string) => { setFilterState(val); setPage(1); };
+  const handleFilterSkill = (val: string) => { setFilterSkill(val); setPage(1); };
 
   const totalPages = applicantsList ? Math.ceil(applicantsList.total / 15) : 1;
+  const rows = allForExport?.data ?? applicantsList?.data ?? [];
+  const activeFilters = [filterState, filterSkill].filter(Boolean).length;
 
+  // ── Export helpers ────────────────────────────────────────────────
+  const exportCSV = () => {
+    const flat = rows.map(r => flattenApplicant(r as Applicant));
+    if (!flat.length) { toast({ title: "No data to export" }); return; }
+    const headers = Object.keys(flat[0]);
+    const csvRows = [headers.join(","), ...flat.map(r => headers.map(h => `"${String((r as Record<string,unknown>)[h] ?? "").replace(/"/g, '""')}"`).join(","))];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "NES_Applicants.csv"; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `Exported ${flat.length} records as CSV` });
+  };
+
+  const exportExcel = () => {
+    const flat = rows.map(r => flattenApplicant(r as Applicant));
+    if (!flat.length) { toast({ title: "No data to export" }); return; }
+    const ws = XLSX.utils.json_to_sheet(flat);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Applicants");
+    XLSX.writeFile(wb, "NES_Applicants.xlsx");
+    toast({ title: `Exported ${flat.length} records as Excel` });
+  };
+
+  const exportPDF = () => {
+    const flat = rows.map(r => flattenApplicant(r as Applicant));
+    if (!flat.length) { toast({ title: "No data to export" }); return; }
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text("National Empowerment Scheme — Applicants Report", 14, 15);
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString("en-NG")}   Total: ${flat.length}`, 14, 21);
+    const cols = ["Reg. Number","Full Name","Gender","State","Skills","Education","Status","Registered On"];
+    const tableRows = flat.map(r => cols.map(c => String((r as Record<string,unknown>)[c] ?? "")));
+    autoTable(doc, {
+      head: [cols], body: tableRows, startY: 25,
+      headStyles: { fillColor: [30, 58, 138], fontSize: 8, cellPadding: 2 },
+      bodyStyles: { fontSize: 7.5, cellPadding: 2 },
+      alternateRowStyles: { fillColor: [245, 247, 255] },
+      margin: { left: 14, right: 14 },
+    });
+    doc.save("NES_Applicants.pdf");
+    toast({ title: `Exported ${flat.length} records as PDF` });
+  };
+
+  const downloadRegistrationSlip = (a: Applicant) => {
+    const doc = new jsPDF({ orientation: "portrait", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    // Header band
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, pageW, 40, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("FEDERAL REPUBLIC OF NIGERIA", pageW / 2, 14, { align: "center" });
+    doc.setFontSize(13);
+    doc.text("National Empowerment Scheme", pageW / 2, 22, { align: "center" });
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Training and Vocational Skills — Registration Slip", pageW / 2, 30, { align: "center" });
+
+    // Reg number
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Registration Number", pageW / 2, 50, { align: "center" });
+    doc.setFontSize(20);
+    doc.text(String(a.registrationNumber ?? ""), pageW / 2, 60, { align: "center" });
+
+    doc.setDrawColor(200, 210, 230);
+    doc.line(14, 65, pageW - 14, 65);
+
+    // Details table
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+
+    const fields: [string, string][] = [
+      ["Full Name", String(a.fullName ?? "")],
+      ["Gender", String(a.gender ?? "")],
+      ["Date of Birth", String(a.dateOfBirth ?? "")],
+      ["Phone Number", String(a.phoneNumber ?? "")],
+      ["Email Address", String(a.email ?? "")],
+      ["State of Residence", String(a.state ?? "")],
+      ["LGA", String(a.lga ?? "")],
+      ["State of Origin", String(a.stateOfOrigin ?? "")],
+      ["NIN", String(a.nin ?? "")],
+      ["Education", String(a.highestEducation ?? "")],
+      ["School Attended", String(a.schoolAttended ?? "")],
+      ["Skills", Array.isArray(a.skills) ? (a.skills as string[]).join(", ") : ""],
+      ["Employment Status", String(a.employmentStatus ?? "")],
+      ["Training Expectation", String(a.trainingExpectation ?? "")],
+      ["Bank Name", String(a.bankName ?? "")],
+      ["Account Number", String(a.bankAccountNumber ?? "")],
+      ["Date Submitted", a.createdAt ? new Date(a.createdAt as string).toLocaleDateString("en-NG", { day: "2-digit", month: "long", year: "numeric" }) : ""],
+    ];
+
+    autoTable(doc, {
+      body: fields,
+      startY: 68,
+      theme: "grid",
+      columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: [240, 245, 255] }, 1: { cellWidth: 120 } },
+      bodyStyles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: 14, right: 14 },
+    });
+
+    // Footer notice
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(14, finalY, pageW - 28, 24, 2, 2, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(80);
+    doc.text("• Keep this registration number safe for future reference.", 18, finalY + 7);
+    doc.text("• You will be contacted with further instructions via phone/email.", 18, finalY + 13);
+    doc.text("• Do not share your NIN or bank details with unauthorized persons.", 18, finalY + 19);
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("This is an official registration confirmation — National Empowerment Scheme, Federal Republic of Nigeria", pageW / 2, 285, { align: "center" });
+
+    doc.save(`NES_Slip_${String(a.registrationNumber ?? "")}.pdf`);
+    toast({ title: "Registration slip downloaded" });
+  };
+
+  // ── Sub-components ────────────────────────────────────────────────
   const StatCard = ({ label, value, color }: { label: string; value: number | string; color: string }) => (
-    <div className={`bg-card border border-card-border rounded-xl p-5 shadow-sm`}>
+    <div className="bg-card border border-card-border rounded-xl p-5 shadow-sm">
       <p className="text-sm text-muted-foreground font-medium">{label}</p>
-      <p className={`text-3xl font-bold mt-1 ${color}`} data-testid={`stat-${label.toLowerCase().replace(/\s/g,"-")}`}>{value}</p>
+      <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
     </div>
   );
 
@@ -114,7 +306,7 @@ export default function AdminDashboard() {
           </a>
           <div className="flex items-center gap-3">
             <span className="text-sm text-primary-foreground/80 hidden sm:block">Welcome, <span className="font-semibold">{(me as Record<string, unknown>).username as string}</span></span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10" data-testid="button-logout">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
               <LogOut className="w-4 h-4 mr-1" /> Logout
             </Button>
           </div>
@@ -129,16 +321,9 @@ export default function AdminDashboard() {
             ["applicants", "Applicants", Users],
             ["statistics", "Statistics", BarChart2],
           ] as const).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              data-testid={`nav-${id}`}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
-                tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+              <Icon className="w-4 h-4 flex-shrink-0" />{label}
             </button>
           ))}
         </aside>
@@ -151,15 +336,18 @@ export default function AdminDashboard() {
               ["applicants", "Applicants", Users],
               ["statistics", "Statistics", BarChart2],
             ] as const).map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium flex-1 justify-center transition-colors ${tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium flex-1 justify-center transition-colors ${tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
                 <Icon className="w-3.5 h-3.5" />{label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Main content */}
+        {/* ── MAIN CONTENT ────────────────────────── */}
         <main className="flex-1 min-w-0">
+
+          {/* DASHBOARD TAB */}
           {tab === "dashboard" && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-foreground">Dashboard Overview</h2>
@@ -177,17 +365,15 @@ export default function AdminDashboard() {
                     <StatCard label="Female" value={stats.femaleCount} color="text-purple-600" />
                     <StatCard label="Other Gender" value={stats.otherGenderCount} color="text-orange-600" />
                   </div>
-
                   <div className="bg-card border border-card-border rounded-xl p-5 shadow-sm">
                     <h3 className="font-bold text-foreground mb-4">Recent Registrations</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Reg. Number</th>
-                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Name</th>
-                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">State</th>
-                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Status</th>
+                            {["Reg. Number","Name","State","Status"].map(h => (
+                              <th key={h} className="text-left py-2 px-3 text-muted-foreground font-medium">{h}</th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
@@ -197,9 +383,7 @@ export default function AdminDashboard() {
                               <td className="py-2.5 px-3 font-medium">{a.fullName}</td>
                               <td className="py-2.5 px-3 text-muted-foreground">{a.state}</td>
                               <td className="py-2.5 px-3">
-                                <Badge variant={a.status === "submitted" ? "default" : "secondary"} className="text-xs">
-                                  {a.status}
-                                </Badge>
+                                <Badge variant={a.status === "submitted" ? "default" : "secondary"} className="text-xs">{a.status}</Badge>
                               </td>
                             </tr>
                           ))}
@@ -215,33 +399,102 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* APPLICANTS TAB */}
           {tab === "applicants" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-xl font-bold text-foreground">Applicants</h2>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    data-testid="input-search"
-                    value={search}
-                    onChange={e => handleSearch(e.target.value)}
-                    placeholder="Search by name, email, reg. number..."
-                    className="pl-9 w-72"
-                  />
-                </div>
+              {/* Toolbar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-foreground mr-auto">Applicants</h2>
+                {/* Export buttons */}
+                <Button variant="outline" size="sm" onClick={exportCSV} title="Export CSV">
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={exportExcel} title="Export Excel">
+                  <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={exportPDF} title="Export PDF">
+                  <Download className="w-3.5 h-3.5 mr-1.5" />PDF
+                </Button>
               </div>
 
+              {/* Search + Filters */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <div className="relative flex-1 min-w-48">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input value={search} onChange={e => handleSearch(e.target.value)}
+                    placeholder="Search name, email, reg. number…" className="pl-9" />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setShowFilters(f => !f)}
+                  className={showFilters || activeFilters > 0 ? "border-primary text-primary" : ""}>
+                  <Filter className="w-3.5 h-3.5 mr-1.5" />
+                  Filters{activeFilters > 0 ? ` (${activeFilters})` : ""}
+                </Button>
+                {(filterState || filterSkill) && (
+                  <Button variant="ghost" size="sm" onClick={() => { setFilterState(""); setFilterSkill(""); setPage(1); }}
+                    className="text-muted-foreground text-xs">
+                    <X className="w-3 h-3 mr-1" />Clear
+                  </Button>
+                )}
+              </div>
+
+              {/* Filter dropdowns */}
+              {showFilters && (
+                <div className="flex flex-wrap gap-3 p-4 bg-card border border-border rounded-xl">
+                  <div className="flex-1 min-w-40">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">State</label>
+                    <select
+                      value={filterState}
+                      onChange={e => handleFilterState(e.target.value)}
+                      className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">All States</option>
+                      {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-48">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Skill</label>
+                    <select
+                      value={filterSkill}
+                      onChange={e => handleFilterSkill(e.target.value)}
+                      className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">All Skills</option>
+                      {SKILLS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Active filter pills */}
+              {(filterState || filterSkill) && (
+                <div className="flex flex-wrap gap-2">
+                  {filterState && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      State: {filterState}
+                      <button onClick={() => handleFilterState("")}><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {filterSkill && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
+                      Skill: {filterSkill}
+                      <button onClick={() => handleFilterSkill("")}><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {applicantsList && (
+                    <span className="text-xs text-muted-foreground self-center">{applicantsList.total} result{applicantsList.total !== 1 ? "s" : ""}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Table */}
               <div className="bg-card border border-card-border rounded-xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/30">
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Reg. Number</th>
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Full Name</th>
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold hidden md:table-cell">State</th>
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold hidden lg:table-cell">Skills</th>
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Status</th>
-                        <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Actions</th>
+                        {["Reg. Number","Full Name","State","Skills","Status","Actions"].map(h => (
+                          <th key={h} className={`text-left py-3 px-4 text-muted-foreground font-semibold ${h === "State" ? "hidden md:table-cell" : ""} ${h === "Skills" ? "hidden lg:table-cell" : ""}`}>{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -252,15 +505,13 @@ export default function AdminDashboard() {
                           </tr>
                         ))
                       ) : applicantsList?.data.map(a => (
-                        <tr key={a.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors" data-testid={`row-applicant-${a.id}`}>
+                        <tr key={a.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                           <td className="py-3 px-4 font-mono text-xs text-primary">{a.registrationNumber}</td>
                           <td className="py-3 px-4 font-medium">{a.fullName}</td>
                           <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{a.state}</td>
                           <td className="py-3 px-4 hidden lg:table-cell">
                             <div className="flex flex-wrap gap-1">
-                              {a.skills.slice(0, 2).map(s => (
-                                <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
-                              ))}
+                              {a.skills.slice(0, 2).map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
                               {a.skills.length > 2 && <Badge variant="outline" className="text-xs">+{a.skills.length - 2}</Badge>}
                             </div>
                           </td>
@@ -269,17 +520,20 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedApplicant(a as never)} data-testid={`button-view-${a.id}`} className="h-7 w-7 p-0">
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedApplicant(a as never)} className="h-7 w-7 p-0" title="View">
                                 <Eye className="w-3.5 h-3.5" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(a.id)} data-testid={`button-delete-${a.id}`} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                              <Button variant="ghost" size="sm" onClick={() => downloadRegistrationSlip(a as never)} className="h-7 w-7 p-0 text-primary hover:text-primary" title="Download slip">
+                                <Printer className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(a.id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive" title="Delete">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </div>
                           </td>
                         </tr>
                       ))}
-                      {!listLoading && (!applicantsList?.data.length) && (
+                      {!listLoading && !applicantsList?.data.length && (
                         <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">No applicants found</td></tr>
                       )}
                     </tbody>
@@ -291,10 +545,10 @@ export default function AdminDashboard() {
                       Showing {((page-1)*15)+1}–{Math.min(page*15, applicantsList.total)} of {applicantsList.total}
                     </p>
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => p-1)} disabled={page === 1} data-testid="button-prevPage">
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => p-1)} disabled={page === 1}>
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => p+1)} disabled={page >= totalPages} data-testid="button-nextPage">
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => p+1)} disabled={page >= totalPages}>
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
@@ -304,6 +558,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* STATISTICS TAB */}
           {tab === "statistics" && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-foreground">Statistics</h2>
@@ -325,19 +580,18 @@ export default function AdminDashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-
                   <div className="bg-card border border-card-border rounded-xl p-5 shadow-sm">
                     <h3 className="font-bold text-foreground mb-4">Skills Distribution</h3>
                     <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
-                        <Pie data={stats.bySkill} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name.split("/")[0]} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
+                        <Pie data={stats.bySkill} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={75}
+                          label={({ name, percent }) => `${(name as string).split("/")[0]} ${((percent as number)*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
                           {stats.bySkill.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />)}
                         </Pie>
                         <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: 12 }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-
                   <div className="bg-card border border-card-border rounded-xl p-5 shadow-sm">
                     <h3 className="font-bold text-foreground mb-4">Education Level</h3>
                     <ResponsiveContainer width="100%" height={200}>
@@ -350,12 +604,12 @@ export default function AdminDashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-
                   <div className="bg-card border border-card-border rounded-xl p-5 shadow-sm">
                     <h3 className="font-bold text-foreground mb-4">Employment Status</h3>
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
-                        <Pie data={stats.byEmploymentStatus} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} fontSize={10}>
+                        <Pie data={stats.byEmploymentStatus} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={75}
+                          label={({ name, percent }) => `${String(name)} ${((percent as number)*100).toFixed(0)}%`} fontSize={10}>
                           {stats.byEmploymentStatus.map((_, idx) => <Cell key={idx} fill={CHART_COLORS[(idx+2) % CHART_COLORS.length]} />)}
                         </Pie>
                         <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: 12 }} />
@@ -370,7 +624,7 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* Applicant Detail Modal */}
+      {/* ── APPLICANT DETAIL MODAL ── */}
       {selectedApplicant && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedApplicant(null)}>
           <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -379,16 +633,23 @@ export default function AdminDashboard() {
                 <h3 className="font-bold text-lg text-foreground">{selectedApplicant.fullName as string}</h3>
                 <p className="text-sm text-primary font-mono">{selectedApplicant.registrationNumber as string}</p>
               </div>
-              <button onClick={() => setSelectedApplicant(null)} className="text-muted-foreground hover:text-foreground p-1"><X className="w-5 h-5" /></button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => downloadRegistrationSlip(selectedApplicant)} className="text-primary border-primary/30 hover:bg-primary/5">
+                  <Printer className="w-3.5 h-3.5 mr-1.5" />Download Slip
+                </Button>
+                <button onClick={() => setSelectedApplicant(null)} className="text-muted-foreground hover:text-foreground p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-            <div className="p-5 space-y-4 text-sm">
+            <div className="p-5 space-y-4 text-sm" ref={slipRef}>
               {[
                 ["Personal", ["fullName","gender","dateOfBirth","phoneNumber","email","state","lga","nin","bankName","bankAccountNumber"]],
                 ["Education", ["highestEducation","schoolAttended","graduationYear"]],
                 ["Training", ["trainingExpectation","employmentStatus","hasPreviousExperience"]],
               ].map(([section, fields]) => (
                 <div key={section as string}>
-                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-muted-foreground mb-2">{section as string}</h4>
+                  <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2">{section as string}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {(fields as string[]).map(field => (
                       <div key={field} className="bg-muted/30 rounded-md p-2">
@@ -407,8 +668,8 @@ export default function AdminDashboard() {
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border">
                 <Badge variant={selectedApplicant.status === "submitted" ? "default" : "secondary"}>{selectedApplicant.status as string}</Badge>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedApplicant.id as number)} data-testid="button-deleteModal">
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedApplicant.id as number)}>
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />Delete
                 </Button>
               </div>
             </div>
