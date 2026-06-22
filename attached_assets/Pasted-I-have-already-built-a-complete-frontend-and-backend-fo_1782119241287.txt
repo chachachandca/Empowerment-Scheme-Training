@@ -1,0 +1,53 @@
+I have already built a complete frontend and backend for my website. Do NOT create a new frontend, backend, database structure, UI, pages, components, routes, or redesign anything.
+
+Your task is ONLY to integrate the existing application with Supabase.
+
+Use the following Supabase credentials:
+
+SUPABASE PROJECT URL:
+[https://ojenoifkzwiddtyjenqb.supabase.co]
+
+SUPABASE PUBLISHABLE KEY:
+[sb_publishable_s0T9-wgBlGK7MWwtuKW4pQ_6t_AYvgm]
+
+Requirements:
+
+1. Analyze the existing source code and identify all forms, API calls, authentication flows, file uploads, and database operations.
+
+2. Replace the current database connection with Supabase while preserving all existing functionality.
+
+3. Connect all registration form submissions to Supabase tables without modifying the current user interface.
+
+4. Connect existing login and registration functionality to Supabase Authentication if authentication already exists.
+
+5. Connect existing file upload features to Supabase Storage while keeping the current upload interface unchanged.
+
+6. Update all create, read, update, and delete (CRUD) operations to use Supabase.
+
+7. Preserve all existing field names, validation rules, workflows, page layouts, navigation, styling, and user experience.
+
+8. Do not generate a new database schema unless absolutely required. Use the existing data structure and map it to Supabase.
+
+9. Store all Supabase credentials securely using environment variables.
+
+10. Fix any integration errors and ensure all existing features continue to work exactly as before.
+
+11. Generate only the files and code changes necessary for Supabase integration.
+
+12. Provide clear instructions showing:
+
+- Which files were modified
+- What code was added
+- What code was replaced
+- How to configure the environment variables
+
+13. After integration, test and verify:
+
+- Form submissions
+- Authentication
+- File uploads
+- Data retrieval
+- Dashboard functionality
+- Admin features
+
+The goal is NOT to rebuild the application. The goal is ONLY to connect the already existing frontend and backend to Supabase with minimal code changes while preserving the current architecture and design.
