@@ -1,34 +1,37 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAdminLogin } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
+import { signInAdmin } from "@/lib/adminAuth";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const adminLogin = useAdminLogin();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
-      toast({ title: "Please enter username and password", variant: "destructive" });
+    if (!email || !password) {
+      toast({ title: "Please enter your email and password", variant: "destructive" });
       return;
     }
-    adminLogin.mutate({ data: { username, password } }, {
-      onSuccess: () => {
-        toast({ title: "Login successful" });
-        setLocation("/admin");
-      },
-      onError: () => toast({ title: "Invalid username or password", variant: "destructive" }),
-    });
+    setLoading(true);
+    try {
+      await signInAdmin(email.trim(), password);
+      toast({ title: "Login successful" });
+      setLocation("/admin");
+    } catch (err) {
+      toast({ title: "Login failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,14 +61,15 @@ export default function AdminLogin() {
           <div className="bg-card border border-card-border rounded-xl shadow-sm p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
-                  id="username"
-                  data-testid="input-username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Enter admin username"
-                  autoComplete="username"
+                  id="email"
+                  data-testid="input-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  autoComplete="email"
                   className="mt-1"
                 />
               </div>
@@ -78,7 +82,7 @@ export default function AdminLogin() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
                     autoComplete="current-password"
                     className="pr-10"
                   />
@@ -94,18 +98,18 @@ export default function AdminLogin() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={adminLogin.isPending}
+                disabled={loading}
                 data-testid="button-login"
               >
                 <Lock className="w-4 h-4 mr-2" />
-                {adminLogin.isPending ? "Signing in..." : "Sign In"}
+                {loading ? "Signing in..." : "Sign In with Supabase"}
               </Button>
             </form>
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-4">
-            This portal is restricted to authorized administrators only.
-            Unauthorized access attempts are logged and monitored.
+            Authentication is powered by Supabase. This portal is restricted to
+            authorized administrators only.
           </p>
         </div>
       </div>
