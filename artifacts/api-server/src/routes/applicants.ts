@@ -10,6 +10,7 @@ import {
   UpdateApplicantBody,
   DeleteApplicantParams,
 } from "@workspace/api-zod";
+import { syncToSupabase, deleteFromSupabase } from "../lib/supabase";
 
 const router: IRouter = Router();
 
@@ -157,6 +158,7 @@ router.post("/applicants/draft", async (req, res): Promise<void> => {
     status: "draft",
   }).returning();
 
+  void syncToSupabase(formatApplicant(applicant) as Record<string, unknown>);
   res.json(formatApplicant(applicant));
 });
 
@@ -204,6 +206,7 @@ router.post("/applicants", async (req, res): Promise<void> => {
     status: "submitted",
   }).returning();
 
+  void syncToSupabase(formatApplicant(applicant) as Record<string, unknown>);
   res.status(201).json(formatApplicant(applicant));
 });
 
@@ -246,6 +249,7 @@ router.patch("/applicants/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  void syncToSupabase(formatApplicant(applicant) as Record<string, unknown>);
   res.json(formatApplicant(applicant));
 });
 
@@ -265,6 +269,7 @@ router.delete("/applicants/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  void deleteFromSupabase(params.data.id);
   res.sendStatus(204);
 });
 
