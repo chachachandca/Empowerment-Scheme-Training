@@ -1,47 +1,52 @@
-import { supabase } from "./supabase";
-import type { User } from "@supabase/supabase-js";
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const ADMIN_EMAILS: string[] = (import.meta.env.VITE_ADMIN_EMAILS as string ?? "")
-  .split(",")
-  .map(e => e.trim().toLowerCase())
-  .filter(Boolean);
-
-export function isAdminEmail(email: string | undefined): boolean {
-  if (!email) return false;
-  return ADMIN_EMAILS.includes(email.toLowerCase());
-}
+export type AdminUser = {
+  id: string | number;
+  username: string;
+  role: string;
+  email?: string;
+};
 
 /**
- * Sign in with Supabase Auth.
- * Throws if credentials are wrong OR if the user is not in the admin whitelist.
+ * Sign in by calling the backend, which checks both the local admins
+ * table and the Supabase admins table.
+ * Throws if credentials are wrong or user is not an appointed admin.
  */
-export async function signInAdmin(email: string, password: string): Promise<User> {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+export async function signInAdmin(email: string, password: string): Promise<AdminUser> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ username: email, password }),
+  });
 
-  if (error) throw new Error(error.message);
-
-  if (!isAdminEmail(data.user?.email)) {
-    await supabase.auth.signOut();
-    throw new Error("You are not authorized to access the admin portal.");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? "Login failed. Check your credentials.");
   }
 
-  return data.user;
+  const data = (await res.json()) as { admin: AdminUser };
+  return data.admin;
 }
 
 export async function signOutAdmin(): Promise<void> {
-  await supabase.auth.signOut();
+  await fetch(`${API_BASE}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
 }
 
 /**
- * Returns the current Supabase session user if they are an authorized admin,
- * otherwise returns null.
+ * Returns the current admin from the backend session, or null if not authenticated.
  */
-export async function getAdminUser(): Promise<User | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return null;
-  if (!isAdminEmail(session.user.email)) {
-    await supabase.auth.signOut();
+export async function getAdminUser(): Promise<AdminUser | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AdminUser;
+  } catch {
     return null;
   }
-  return session.user;
 }
