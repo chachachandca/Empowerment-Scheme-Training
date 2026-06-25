@@ -1,0 +1,1 @@
+- [Supabase admins table](supabase-admins-auth.md) — admins use `username` (email) + `password_hash` (plain text), NOT Supabase Auth; backend checks this table directly.

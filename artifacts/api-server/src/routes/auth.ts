@@ -122,5 +122,66 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   res.json(admin);
 });
 
+router.patch("/auth/password", async (req, res): Promise<void> => {
+  const token = req.cookies?.admin_token;
+  if (!token) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const session = activeSessions.get(token);
+  if (!session) {
+    res.status(401).json({ error: "Session expired" });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body as {
+    currentPassword?: string;
+    newPassword?: string;
+  };
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "currentPassword and newPassword are required" });
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "New password must be at least 6 characters" });
+    return;
+  }
+
+  // Fetch the admin from Supabase to verify current password
+  const { data: rows, error } = await supabaseAdmin
+    .from("admins")
+    .select("id, username, password_hash")
+    .eq("username", session.username)
+    .limit(1);
+
+  if (error || !rows || rows.length === 0) {
+    res.status(404).json({ error: "Admin account not found in Supabase" });
+    return;
+  }
+
+  const adminRow = rows[0] as { id: string; username: string; password_hash: string };
+
+  if (adminRow.password_hash !== currentPassword) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+
+  // Update the password in Supabase
+  const { error: updateError } = await supabaseAdmin
+    .from("admins")
+    .update({ password_hash: newPassword, updated_at: new Date().toISOString() })
+    .eq("id", adminRow.id);
+
+  if (updateError) {
+    res.status(500).json({ error: "Failed to update password: " + updateError.message });
+    return;
+  }
+
+  res.json({ success: true, message: "Password updated successfully" });
+});
+
 export { activeSessions, hashPassword };
 export default router;

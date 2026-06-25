@@ -19,8 +19,8 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer,
 } from "recharts";
 import {
-  LayoutDashboard, Users, BarChart2, LogOut, Search, Trash2, Eye, X,
-  ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet, Filter, Printer,
+  LayoutDashboard, Users, BarChart2, LogOut, Search, Trash2, Eye, EyeOff, X,
+  ChevronLeft, ChevronRight, Download, FileText, FileSpreadsheet, Filter, Printer, KeyRound,
 } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
 import jsPDF from "jspdf";
@@ -81,6 +81,10 @@ export default function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwShow, setPwShow] = useState({ current: false, next: false, confirm: false });
+  const [pwLoading, setPwLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slipRef = useRef<HTMLDivElement>(null);
@@ -154,6 +158,32 @@ export default function AdminDashboard() {
   const handleSearch = (val: string) => { setSearch(val); setPage(1); };
   const handleFilterState = (val: string) => { setFilterState(val); setPage(1); };
   const handleFilterSkill = (val: string) => { setFilterSkill(val); setPage(1); };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwForm.current) { toast({ title: "Enter your current password", variant: "destructive" }); return; }
+    if (pwForm.next.length < 6) { toast({ title: "New password must be at least 6 characters", variant: "destructive" }); return; }
+    if (pwForm.next !== pwForm.confirm) { toast({ title: "New passwords do not match", variant: "destructive" }); return; }
+    setPwLoading(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/auth/password`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
+      });
+      const data = await res.json() as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update password");
+      toast({ title: "Password updated successfully" });
+      setShowChangePassword(false);
+      setPwForm({ current: "", next: "", confirm: "" });
+    } catch (err) {
+      toast({ title: "Password change failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   const totalPages = applicantsList ? Math.ceil(applicantsList.total / 15) : 1;
   const rows = allForExport?.data ?? applicantsList?.data ?? [];
@@ -304,8 +334,11 @@ export default function AdminDashboard() {
               <p className="text-primary-foreground/75 text-xs">Admin Dashboard</p>
             </div>
           </a>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-primary-foreground/80 hidden sm:block">Welcome, <span className="font-semibold">{(me as Record<string, unknown>).username as string}</span></span>
+            <Button variant="ghost" size="sm" onClick={() => setShowChangePassword(true)} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10" title="Change Password">
+              <KeyRound className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Change Password</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
               <LogOut className="w-4 h-4 mr-1" /> Logout
             </Button>
@@ -623,6 +656,67 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* ── CHANGE PASSWORD MODAL ── */}
+      {showChangePassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowChangePassword(false)}>
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-lg text-foreground">Change Password</h3>
+              </div>
+              <button onClick={() => setShowChangePassword(false)} className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="p-5 space-y-4">
+              <p className="text-sm text-muted-foreground">Update your admin account password. Enter your current password to confirm the change.</p>
+              {(["current", "next", "confirm"] as const).map((field) => {
+                const labels = { current: "Current Password", next: "New Password", confirm: "Confirm New Password" };
+                const placeholders = { current: "Enter current password", next: "Min. 6 characters", confirm: "Re-enter new password" };
+                return (
+                  <div key={field}>
+                    <label className="text-sm font-medium text-foreground block mb-1">{labels[field]}</label>
+                    <div className="relative">
+                      <Input
+                        type={pwShow[field] ? "text" : "password"}
+                        value={pwForm[field]}
+                        onChange={e => setPwForm(p => ({ ...p, [field]: e.target.value }))}
+                        placeholder={placeholders[field]}
+                        className="pr-10"
+                        autoComplete={field === "current" ? "current-password" : "new-password"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPwShow(p => ({ ...p, [field]: !p[field] }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {pwShow[field] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {field === "next" && pwForm.next.length > 0 && pwForm.next.length < 6 && (
+                      <p className="text-xs text-destructive mt-1">Password too short (min. 6 characters)</p>
+                    )}
+                    {field === "confirm" && pwForm.confirm.length > 0 && pwForm.next !== pwForm.confirm && (
+                      <p className="text-xs text-destructive mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+                );
+              })}
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowChangePassword(false); setPwForm({ current: "", next: "", confirm: "" }); }}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" disabled={pwLoading}>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  {pwLoading ? "Updating…" : "Update Password"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── APPLICANT DETAIL MODAL ── */}
       {selectedApplicant && (
