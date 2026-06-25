@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, BookOpen, Briefcase, FileText } from "lucide-react";
+import AdUnit from "@/components/AdUnit";
 
 export default function Home() {
   return (
@@ -53,6 +54,11 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Ad — between hero and How it Works */}
+        <div className="bg-white border-b border-slate-100 py-3 px-4">
+          <AdUnit slot="1111111111" format="horizontal" className="max-w-4xl mx-auto" style={{ minHeight: 90 }} />
+        </div>
 
         {/* Info Section */}
         <section className="py-20 bg-white">
@@ -109,6 +115,11 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* Ad — above footer */}
+      <div className="bg-white border-t border-slate-100 py-3 px-4">
+        <AdUnit slot="2222222222" format="auto" className="max-w-4xl mx-auto" style={{ minHeight: 90 }} />
+      </div>
 
       <footer className="bg-slate-900 text-slate-400 py-12">
         <div className="container mx-auto px-4 text-center">

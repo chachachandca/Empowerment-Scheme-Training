@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Printer, Home } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
+import AdUnit from "@/components/AdUnit";
 
 export default function Success() {
   const [location, setLocation] = useLocation();
@@ -88,7 +89,12 @@ export default function Success() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mt-6 print:hidden">
+        {/* Ad — below registration slip */}
+        <div className="mt-6 print:hidden">
+          <AdUnit slot="4444444444" format="auto" style={{ minHeight: 90 }} />
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mt-4 print:hidden">
           <Button onClick={handlePrint} variant="outline" className="flex-1" data-testid="button-print">
             <Printer className="w-4 h-4 mr-2" />
             Print Registration Slip

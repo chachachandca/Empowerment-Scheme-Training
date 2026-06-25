@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, CheckCircle, Save, Loader2 } from "lucide-react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
 import { uploadPassportPhoto } from "@/lib/supabase";
+import AdUnit from "@/components/AdUnit";
 
 const NIGERIAN_STATES = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -489,6 +490,9 @@ export default function Register() {
             ))}
           </div>
         </div>
+
+        {/* Ad — above form card */}
+        <AdUnit slot="3333333333" format="horizontal" className="mb-4" style={{ minHeight: 90 }} />
 
         <div className="bg-card border border-card-border rounded-xl shadow-sm p-6 md:p-8">
           <h3 className="text-xl font-bold text-foreground mb-6 pb-3 border-b border-border">
