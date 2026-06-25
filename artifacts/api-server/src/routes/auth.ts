@@ -20,7 +20,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const { username, password } = parsed.data;
+  const { username: rawUsername, password } = parsed.data;
+  const username = rawUsername.trim().toLowerCase();
 
   // 1. Check local DB admins first (username + SHA256 hash)
   const hashed = hashPassword(password);
@@ -51,11 +52,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // 2. Check Supabase admins table (username field = email, password_hash = plain text)
+  // 2. Check Supabase admins table (case-insensitive email match)
   const { data: supabaseAdmins, error: supabaseError } = await supabaseAdmin
     .from("admins")
     .select("id, username, password_hash, role")
-    .eq("username", username)
+    .ilike("username", username)
     .limit(1);
 
   if (supabaseError || !supabaseAdmins || supabaseAdmins.length === 0) {
@@ -150,11 +151,11 @@ router.patch("/auth/password", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fetch the admin from Supabase to verify current password
+  // Fetch the admin from Supabase to verify current password (case-insensitive)
   const { data: rows, error } = await supabaseAdmin
     .from("admins")
     .select("id, username, password_hash")
-    .eq("username", session.username)
+    .ilike("username", session.username)
     .limit(1);
 
   if (error || !rows || rows.length === 0) {
