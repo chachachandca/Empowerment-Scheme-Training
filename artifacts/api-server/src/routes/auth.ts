@@ -183,5 +183,105 @@ router.patch("/auth/password", async (req, res): Promise<void> => {
   res.json({ success: true, message: "Password updated successfully" });
 });
 
+// ── ADMIN MANAGEMENT ──────────────────────────────────────────────────────────
+
+function requireAuth(req: import("express").Request, res: import("express").Response): { id: string | number; username: string; role: string } | null {
+  const token = req.cookies?.admin_token;
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return null; }
+  const session = activeSessions.get(token);
+  if (!session) { res.status(401).json({ error: "Session expired" }); return null; }
+  return session;
+}
+
+router.get("/admins", async (req, res): Promise<void> => {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
+  const { data, error } = await supabaseAdmin
+    .from("admins")
+    .select("id, username, role, created_at")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json(data ?? []);
+});
+
+router.post("/admins", async (req, res): Promise<void> => {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
+  const { username, password, role } = req.body as {
+    username?: string;
+    password?: string;
+    role?: string;
+  };
+
+  if (!username || !password) {
+    res.status(400).json({ error: "username and password are required" });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
+    return;
+  }
+
+  // Check if admin already exists
+  const { data: existing } = await supabaseAdmin
+    .from("admins")
+    .select("id")
+    .eq("username", username)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    res.status(409).json({ error: "An admin with this email already exists" });
+    return;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("admins")
+    .insert({
+      username,
+      password_hash: password,
+      role: role ?? "admin",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select("id, username, role, created_at")
+    .single();
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.status(201).json(data);
+});
+
+router.delete("/admins/:id", async (req, res): Promise<void> => {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
+  const { id } = req.params;
+
+  // Prevent self-deletion
+  if (String(session.id) === String(id)) {
+    res.status(403).json({ error: "You cannot delete your own account" });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.from("admins").delete().eq("id", id);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json({ success: true });
+});
+
 export { activeSessions, hashPassword };
 export default router;
