@@ -84,7 +84,7 @@ router.get("/applicants", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, state, skill, gender, status, page = 1, limit = 20 } = parsed.data;
+  const { search, state, skill, gender, status, nin, phone, page = 1, limit = 20 } = parsed.data;
 
   let allApplicants = await db.select().from(applicantsTable).orderBy(desc(applicantsTable.createdAt));
 
@@ -94,9 +94,12 @@ router.get("/applicants", async (req, res): Promise<void> => {
       a.fullName.toLowerCase().includes(s) ||
       a.email.toLowerCase().includes(s) ||
       a.registrationNumber.toLowerCase().includes(s) ||
-      a.phoneNumber.includes(s)
+      a.phoneNumber.includes(s) ||
+      a.nin.toLowerCase().includes(s)
     );
   }
+  if (nin) allApplicants = allApplicants.filter(a => a.nin.toLowerCase().includes(nin.toLowerCase()));
+  if (phone) allApplicants = allApplicants.filter(a => a.phoneNumber.includes(phone));
   if (state) allApplicants = allApplicants.filter(a => a.state === state);
   if (gender) allApplicants = allApplicants.filter(a => a.gender.toLowerCase() === gender.toLowerCase());
   if (status) allApplicants = allApplicants.filter(a => a.status === status);

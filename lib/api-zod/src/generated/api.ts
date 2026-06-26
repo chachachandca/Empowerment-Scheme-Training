@@ -21,11 +21,13 @@ export const HealthCheckResponse = zod.object({
  * @summary List all applicants
  */
 export const ListApplicantsQueryParams = zod.object({
-  "search": zod.coerce.string().optional().describe('Search by name, email, or registration number'),
+  "search": zod.coerce.string().optional().describe('Search by name, email, registration number, phone, or NIN'),
   "state": zod.coerce.string().optional().describe('Filter by state'),
   "skill": zod.coerce.string().optional().describe('Filter by skill category'),
   "gender": zod.coerce.string().optional().describe('Filter by gender'),
   "status": zod.coerce.string().optional().describe('Filter by status (submitted, draft)'),
+  "nin": zod.coerce.string().optional().describe('Filter by NIN (exact or partial match)'),
+  "phone": zod.coerce.string().optional().describe('Filter by phone number (exact or partial match)'),
   "page": zod.coerce.number().optional().describe('Page number'),
   "limit": zod.coerce.number().optional().describe('Items per page')
 })

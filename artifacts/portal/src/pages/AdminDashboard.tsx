@@ -80,6 +80,8 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [filterState, setFilterState] = useState("");
   const [filterSkill, setFilterSkill] = useState("");
+  const [filterNin, setFilterNin] = useState("");
+  const [filterPhone, setFilterPhone] = useState("");
   const [page, setPage] = useState(1);
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -109,6 +111,8 @@ export default function AdminDashboard() {
     search: search || undefined,
     state: filterState || undefined,
     skill: filterSkill || undefined,
+    nin: filterNin || undefined,
+    phone: filterPhone || undefined,
     page,
     limit: 15,
   };
@@ -121,6 +125,8 @@ export default function AdminDashboard() {
     search: search || undefined,
     state: filterState || undefined,
     skill: filterSkill || undefined,
+    nin: filterNin || undefined,
+    phone: filterPhone || undefined,
     limit: 10000,
     page: 1,
   };
@@ -166,6 +172,8 @@ export default function AdminDashboard() {
   const handleSearch = (val: string) => { setSearch(val); setPage(1); };
   const handleFilterState = (val: string) => { setFilterState(val); setPage(1); };
   const handleFilterSkill = (val: string) => { setFilterSkill(val); setPage(1); };
+  const handleFilterNin = (val: string) => { setFilterNin(val); setPage(1); };
+  const handleFilterPhone = (val: string) => { setFilterPhone(val); setPage(1); };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,7 +258,7 @@ export default function AdminDashboard() {
 
   const totalPages = applicantsList ? Math.ceil(applicantsList.total / 15) : 1;
   const rows = allForExport?.data ?? applicantsList?.data ?? [];
-  const activeFilters = [filterState, filterSkill].filter(Boolean).length;
+  const activeFilters = [filterState, filterSkill, filterNin, filterPhone].filter(Boolean).length;
 
   // ── Export helpers ────────────────────────────────────────────────
   const exportCSV = () => {
@@ -520,15 +528,15 @@ export default function AdminDashboard() {
                 <div className="relative flex-1 min-w-48">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input value={search} onChange={e => handleSearch(e.target.value)}
-                    placeholder="Search name, email, reg. number…" className="pl-9" />
+                    placeholder="Search name, email, reg. number, NIN, phone…" className="pl-9" />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setShowFilters(f => !f)}
                   className={showFilters || activeFilters > 0 ? "border-primary text-primary" : ""}>
                   <Filter className="w-3.5 h-3.5 mr-1.5" />
                   Filters{activeFilters > 0 ? ` (${activeFilters})` : ""}
                 </Button>
-                {(filterState || filterSkill) && (
-                  <Button variant="ghost" size="sm" onClick={() => { setFilterState(""); setFilterSkill(""); setPage(1); }}
+                {(filterState || filterSkill || filterNin || filterPhone) && (
+                  <Button variant="ghost" size="sm" onClick={() => { setFilterState(""); setFilterSkill(""); setFilterNin(""); setFilterPhone(""); setPage(1); }}
                     className="text-muted-foreground text-xs">
                     <X className="w-3 h-3 mr-1" />Clear
                   </Button>
@@ -560,11 +568,30 @@ export default function AdminDashboard() {
                       {SKILLS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
+                  <div className="flex-1 min-w-44">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">NIN Lookup</label>
+                    <Input
+                      value={filterNin}
+                      onChange={e => handleFilterNin(e.target.value)}
+                      placeholder="Enter NIN…"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-44">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Phone Lookup</label>
+                    <Input
+                      value={filterPhone}
+                      onChange={e => handleFilterPhone(e.target.value)}
+                      placeholder="Enter phone number…"
+                      className="h-9 text-sm"
+                      type="tel"
+                    />
+                  </div>
                 </div>
               )}
 
               {/* Active filter pills */}
-              {(filterState || filterSkill) && (
+              {(filterState || filterSkill || filterNin || filterPhone) && (
                 <div className="flex flex-wrap gap-2">
                   {filterState && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
@@ -576,6 +603,18 @@ export default function AdminDashboard() {
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
                       Skill: {filterSkill}
                       <button onClick={() => handleFilterSkill("")}><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {filterNin && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                      NIN: {filterNin}
+                      <button onClick={() => handleFilterNin("")}><X className="w-3 h-3" /></button>
+                    </span>
+                  )}
+                  {filterPhone && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                      Phone: {filterPhone}
+                      <button onClick={() => handleFilterPhone("")}><X className="w-3 h-3" /></button>
                     </span>
                   )}
                   {applicantsList && (

@@ -167,7 +167,7 @@ export interface AuthResponse {
 
 export type ListApplicantsParams = {
 /**
- * Search by name, email, or registration number
+ * Search by name, email, registration number, phone, or NIN
  */
 search?: string;
 /**
@@ -186,6 +186,14 @@ gender?: string;
  * Filter by status (submitted, draft)
  */
 status?: string;
+/**
+ * Filter by NIN (exact or partial match)
+ */
+nin?: string;
+/**
+ * Filter by phone number (exact or partial match)
+ */
+phone?: string;
 /**
  * Page number
  */
