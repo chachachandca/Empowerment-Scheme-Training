@@ -1,10 +1,46 @@
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 import logoPath from "@assets/IMG-20260622-WA0001_1782115480105.jpg";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, BookOpen, Briefcase, FileText } from "lucide-react";
+import { CheckCircle2, BookOpen, Briefcase, FileText, Users } from "lucide-react";
 import AdUnit from "@/components/AdUnit";
 
+function useRegistrationCount() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/applicants/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { totalRegistrations?: number } | null) => {
+        if (data?.totalRegistrations !== undefined) setCount(data.totalRegistrations);
+      })
+      .catch(() => {});
+  }, []);
+
+  return count;
+}
+
+function AnimatedCount({ value }: { value: number }) {
+  const [displayed, setDisplayed] = useState(0);
+
+  useEffect(() => {
+    if (value === 0) { setDisplayed(0); return; }
+    let start = 0;
+    const step = Math.ceil(value / 40);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= value) { setDisplayed(value); clearInterval(timer); }
+      else setDisplayed(start);
+    }, 30);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return <>{displayed.toLocaleString("en-NG")}</>;
+}
+
 export default function Home() {
+  const registrationCount = useRegistrationCount();
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
@@ -51,6 +87,23 @@ export default function Home() {
                   Learn More
                 </Button>
               </div>
+
+              {/* Live registration counter */}
+              {registrationCount !== null && (
+                <div className="mt-8 inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-5 py-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary/80">
+                    <Users className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-xl leading-none">
+                      <AnimatedCount value={registrationCount} />
+                      {registrationCount > 0 && "+"}
+                    </p>
+                    <p className="text-blue-100 text-xs mt-0.5">Nigerians already registered</p>
+                  </div>
+                  <div className="w-2 h-2 rounded-full bg-secondary animate-pulse ml-1" title="Live count" />
+                </div>
+              )}
             </div>
           </div>
         </section>
