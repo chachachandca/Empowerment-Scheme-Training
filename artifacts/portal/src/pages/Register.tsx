@@ -90,6 +90,7 @@ export default function Register() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(defaultValues);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [localPhotoPreview, setLocalPhotoPreview] = useState<string>("");
   const { toast } = useToast();
   const createApplicant = useCreateApplicant();
   const saveDraft = useSaveDraft();
@@ -215,9 +216,10 @@ export default function Register() {
                 {formData.passportPhotoUrl ? (
                   <div className="flex items-start gap-4">
                     <img
-                      src={formData.passportPhotoUrl}
+                      src={localPhotoPreview || formData.passportPhotoUrl}
                       alt="Passport"
                       className="w-28 h-28 object-cover rounded-lg border-2 border-primary/30 shadow-sm"
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                     <div className="flex flex-col gap-2 pt-1">
                       <p className="text-sm text-secondary font-medium">Photo uploaded ✓</p>
@@ -229,7 +231,7 @@ export default function Register() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => updateField("passportPhotoUrl", "")}
+                        onClick={() => { updateField("passportPhotoUrl", ""); setLocalPhotoPreview(""); }}
                         className="text-xs text-destructive hover:underline text-left"
                       >
                         Remove
@@ -273,6 +275,8 @@ export default function Register() {
                       return;
                     }
                     e.target.value = "";
+                    const previewUrl = URL.createObjectURL(file);
+                    setLocalPhotoPreview(previewUrl);
                     setPhotoUploading(true);
                     try {
                       const url = await uploadPassportPhoto(file);
