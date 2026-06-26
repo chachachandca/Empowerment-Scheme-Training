@@ -409,7 +409,7 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="flex flex-1 max-w-7xl mx-auto w-full px-4 py-6 gap-6">
+      <div className="flex flex-col md:flex-row flex-1 max-w-7xl mx-auto w-full px-4 py-6 gap-4 md:gap-6">
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col w-48 flex-shrink-0 gap-1">
           {([
